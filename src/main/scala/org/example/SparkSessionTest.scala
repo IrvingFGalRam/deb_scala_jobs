@@ -8,6 +8,13 @@ object SparkSessionTest extends App{
     .appName("SparkByExample")
     .getOrCreate();
 
+  // Testing program Arguments
+  println("\t\tProgram Arguments:")
+  println(args.mkString(", "))
+
+  // Testing Environment Variables
+  println("ENV" + sys.env("TEST_ENV"))
+
   println("First SparkContext:")
   println("APP Name :"+spark.sparkContext.appName);
   println("Deploy Mode :"+spark.sparkContext.deployMode);

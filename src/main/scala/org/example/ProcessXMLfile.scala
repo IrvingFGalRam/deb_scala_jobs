@@ -6,8 +6,6 @@ import com.databricks.spark.xml.schema_of_xml
 import org.apache.spark.sql.types.{StringType, StructType}
 
 object ProcessXMLfile extends App{
-  val inputCSVpath = "C:/Users/irvin/OneDrive/Documentos/Trabajos/Workshops/Wizeline/CapstoneProject/local/data/bronze/log_reviews.csv"
-  val outputDF = "C:/Users/irvin/OneDrive/Documentos/Trabajos/Workshops/Wizeline/CapstoneProject/local/data/silver/review_logs"
 
   val spark = SparkSession.builder()
     .master("local[1]")
@@ -15,6 +13,9 @@ object ProcessXMLfile extends App{
     .getOrCreate();
 
   import spark.implicits._
+
+  val inputCSVpath = sys.env("INPUT_PATH")
+  val outputDF = sys.env("OUTPUT_PATH")
 
   println("Reading log_reviews file")
   val df = spark.read.option("header", value = true).csv(inputCSVpath)
