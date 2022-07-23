@@ -1,11 +1,13 @@
 package org.example
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.functions.{col, lit, when}
 import com.databricks.spark.xml.functions.from_xml
 import com.databricks.spark.xml.schema_of_xml
+import org.apache.spark.sql.types.{StringType, StructType}
 
 object ProcessXMLfile extends App{
+  val inputCSVpath = "C:/Users/irvin/OneDrive/Documentos/Trabajos/Workshops/Wizeline/CapstoneProject/local/data/bronze/log_reviews.csv"
+  val outputDF = "C:/Users/irvin/OneDrive/Documentos/Trabajos/Workshops/Wizeline/CapstoneProject/local/data/silver/review_logs"
 
   val spark = SparkSession.builder()
     .master("local[1]")
@@ -14,26 +16,49 @@ object ProcessXMLfile extends App{
 
   import spark.implicits._
 
-  println("Reading")
-  val df = spark.read.option("header", true).csv("C:/Users/irvin/OneDrive/Documentos/Trabajos/Workshops/Wizeline/CapstoneProject/local/log_reviews.csv")
-  println("schema_of_xml")
+  println("Reading log_reviews file")
+  val df = spark.read.option("header", value = true).csv(inputCSVpath)
+  // Parses the schema from XML at "log" column
   val logSchema = schema_of_xml(df.select("log").as[String])
-  println("schema_of_xml")
+  // Inserts "parsed" column with the "log" xml content as a Struct col
   val parsed = df.withColumn("parsed", from_xml($"log", logSchema))
-  println("schema_of_xml")
+  // Unpaking DF parsed.log columns
   val log_rev = parsed.select("id_review", "parsed.log.*")
-  println("schema_of_xml")
   log_rev.show(5)
-//  log_rev.write.mode("append").parquet("C:/Users/irvin/OneDrive/Documentos/Trabajos/Workshops/Wizeline/CapstoneProject/local/data/log_rev_arch/")
-  val log_rev_df = log_rev.select(col("id_review").as("log_id"),
-    col("logDate").as("log_date"),
-    col("device"),
-    col("os"),
-    col("location"),
-    lit("browser"),
-    col("ipAddress").as("ip"),
-    col("phoneNumber").as("phone_number")
+
+  // Auxiliary DF to fill browsers
+  val device_browserData = Seq(
+    Row("Microsoft Windows", "Edge"),
+    Row("Linux", "Firefox"),
+    Row("Apple iOS", "Safari"),
+    Row("Apple MacOS", "Safari"),
+    Row("Google Android", "Chrome")
+  )
+  val device_browserSchema = new StructType()
+    .add("os_aux",StringType)
+    .add("browser",StringType)
+  val device_browser = spark.createDataFrame(spark.sparkContext.parallelize(device_browserData), device_browserSchema)
+  device_browser.show()
+
+  // Join to set browser according to the device's OS
+  val log_rev_tmp = log_rev.join(device_browser,
+    log_rev("os") === device_browser("os_aux"),
+    "left"
+  )
+  log_rev_tmp.show()
+
+  // Renaming cols and inserting browser column
+  val log_rev_df = log_rev_tmp.select($"id_review" as "log_id",
+    $"logDate" as "log_date",
+    $"device",
+    $"os",
+    $"location",
+    $"browser",
+    $"ipAddress" as "ip",
+    $"phoneNumber" as "phone_number"
   )
   log_rev_df.show(5)
 
+  // Saving transformed DF as Avro (row based, better when dealing with the whole table)
+  log_rev_df.write.mode("overwrite").format("avro").save(outputDF)
 }

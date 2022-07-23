@@ -1,6 +1,8 @@
 package org.example
 import org.apache.spark.sql.SparkSession
 object SparkSessionTest extends App{
+//  Followed guide: https://sparkbyexamples.com/spark/spark-setup-run-with-scala-intellij/
+
   val spark = SparkSession.builder()
     .master("local[1]")
     .appName("SparkByExample")
