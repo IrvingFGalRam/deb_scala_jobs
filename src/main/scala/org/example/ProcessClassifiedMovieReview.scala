@@ -1,0 +1,154 @@
+package org.example
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import org.apache.spark.sql.{Column, SparkSession, functions => F}
+import org.apache.spark.ml.feature.{NGram, StopWordsRemover, Tokenizer}
+
+object ProcessClassifiedMovieReview extends App{
+
+  val spark = SparkSession.builder()
+    .master("local[1]")
+    .appName("Process Classified Movie Review Job")
+    .getOrCreate();
+
+  import spark.implicits._
+
+  val inputCSVpath = sys.env("INPUT_PATH")
+  val outputDFpath = sys.env("OUTPUT_PATH")
+
+  println("Reading CSV")
+  val df_movie_review = spark.read.option("header", value = true).csv(inputCSVpath)
+  df_movie_review.show(5, truncate = false)
+
+  // Cleaning review string
+  val chars_to_remove = ".,;-_()'!¡*"
+  val strings_to_remove = "<br />"
+  val df = df_movie_review.withColumn("clean_review", F.translate($"review_str", chars_to_remove, "")
+  ).withColumn("clean_review", F.regexp_replace($"clean_review", strings_to_remove, ""))
+
+  // Configuring tokenizer to split review into words and remover to filter out non contextual words
+  val tokenizer = new Tokenizer().setInputCol("clean_review").setOutputCol("words")
+  val remover = new StopWordsRemover().setInputCol("words").setOutputCol("filtered")
+
+  // Remove key words from stopWords. To disable the words from being filtered out
+  val ok_words = List("isn't", "its", "wasn't", "couldn't", "above")
+
+  var stopWords = remover.getStopWords.to(ListBuffer)
+  ok_words.foreach(stopWords -= _)
+  val cstm_stopWords = for (s <- stopWords)
+    yield s.replace("\'", "")
+
+  // Applying separation and filtering
+  val tokenized_df = remover.transform(tokenizer.transform(df))
+  tokenized_df.select($"cid", $"id_review", $"filtered").show(5, truncate=false)
+
+  // Grouping each 2 words to try and get a little bit more context
+  val ngram = new NGram().setN(2).setInputCol("filtered").setOutputCol("ngrams")
+  val ngram_df = ngram.transform(tokenized_df)
+
+  // Setting individual words and word combinations to assign positive_review
+  val good_ls = List("good", "great", "cool", "neat", "best", "solid", "average", "genius", "incredible")
+  val ratings_ls = List("5/10", "6/10", "7/10", "8/10", "9/10", "10/10")
+  val good_simple_ls = good_ls ++ ratings_ls
+
+  val aux_ls = List("movie", "film", "its", "great", "frankly", "just", "plain", "pretty")
+
+  val bad_ls = List("bad", "horrible", "mediocre", "boring", "worst", "sucks", "stinks", "dissapointment")
+  val modifier_ls = List("wasnt", "isnt", "not")
+
+  var good_complex_ls = ListBuffer("couldnt better", "above average", "master piece", "half bad")
+  var bad_complex_ls = ListBuffer[String]()
+  // Setting up the good "complex" two-word search terms
+  for(bad <- bad_ls){
+    good_complex_ls ++= (
+      for(mod <- modifier_ls) yield (mod + " " + bad)
+    )
+  }
+  for(good <- good_ls){
+    good_complex_ls ++= (
+      for(aux <- aux_ls) yield (aux + " " + good)
+      )
+  }
+  for(good <- good_ls){
+    good_complex_ls ++= (
+      for(aux <- aux_ls) yield (good + " " + aux)
+      )
+  }
+  println(good_complex_ls.length)
+  // List so it can be unpacked https://stackoverflow.com/questions/15034565/is-there-a-scala-equivalent-of-the-python-list-unpack-a-k-a-operator
+  val good_search_terms: List[Column] = (for(search_term <- good_complex_ls) yield F.lit(search_term)).toList
+  // Setting up the bad "complex" two-word search terms
+  for(good <- good_ls){
+    bad_complex_ls ++= (
+      for(mod <- modifier_ls) yield (mod + " " + good)
+      )
+  }
+  for(bad <- bad_ls){
+    bad_complex_ls ++= (
+      for(aux <- aux_ls) yield (aux + " " + bad)
+      )
+  }
+  for(bad <- bad_ls){
+    bad_complex_ls ++= (
+      for(aux <- aux_ls) yield (bad + " " + aux)
+      )
+  }
+  println(bad_complex_ls.length)
+  val bad_search_terms: List[Column] = (for(search_term <- bad_complex_ls) yield F.lit(search_term)).toList
+  println(good_search_terms.length)
+  println(bad_search_terms.length)
+//  bad_complex_ls.foreach(println)
+  // Searching for simple one-word occurrences
+  var final_df = ngram_df.withColumn("is_good",
+    F.when(F.array_contains(ngram_df("filtered") ,"good"), "1")
+      .otherwise("0")
+  )
+  final_df = final_df.withColumn("is_bad",
+    F.when(F.array_contains(final_df("filtered") ,"bad"), "1")
+      .otherwise("0")
+  )
+  // Searching for "complex" two-word occurrences
+  final_df = final_df.withColumn("complex_good",
+    F.when(
+      F.size(
+        F.array_intersect(final_df("ngrams"), F.array(good_search_terms: _*))
+      )
+        > 0,
+      "1"
+    ).otherwise("0")
+  )
+  final_df = final_df.withColumn("complex_bad",
+    F.when(
+      F.size(
+        F.array_intersect(final_df("ngrams"), F.array(bad_search_terms: _*))
+      )
+        > 0,
+      "1"
+    ).otherwise("0")
+  )
+
+  val movie_review_df =
+    final_df.withColumn("positive_review",
+      F.when(
+        ((F.col("is_good") === "1") && (F.col("complex_bad") === "0")
+          ) ||
+          ((F.col("complex_good") === "1") && (F.col("complex_bad") === "0")),
+        1
+      ).otherwise(0)
+    )
+
+  movie_review_df.groupBy("positive_review").count().show()
+
+  movie_review_df.select(
+    F.col("cid").alias("user_id"),
+    $"positive_review",
+    F.col("id_review").alias("review_id")
+  ).write.mode("overwrite").partitionBy("positive_review").parquet(outputDFpath + "3")
+//    .mode("append")
+//    .partitionBy("positive_review")
+//    .format("avro")
+//    .save(outputDFpath)
+
+
+  //  df.write.mode("overwrite").parquet(outputDF)
+
+}

@@ -5,11 +5,11 @@ import com.databricks.spark.xml.functions.from_xml
 import com.databricks.spark.xml.schema_of_xml
 import org.apache.spark.sql.types.{StringType, StructType}
 
-object ProcessXMLfile extends App{
+object ProcessReviewLogs extends App{
 
   val spark = SparkSession.builder()
     .master("local[1]")
-    .appName("SparkProcessTest")
+    .appName("Process Review Logs Job")
     .getOrCreate();
 
   import spark.implicits._
