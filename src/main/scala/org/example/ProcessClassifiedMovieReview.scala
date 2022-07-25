@@ -73,7 +73,6 @@ object ProcessClassifiedMovieReview extends App{
       for(aux <- aux_ls) yield (good + " " + aux)
       )
   }
-  println(good_complex_ls.length)
   // List so it can be unpacked https://stackoverflow.com/questions/15034565/is-there-a-scala-equivalent-of-the-python-list-unpack-a-k-a-operator
   val good_search_terms: List[Column] = (for(search_term <- good_complex_ls) yield F.lit(search_term)).toList
   // Setting up the bad "complex" two-word search terms
@@ -92,11 +91,8 @@ object ProcessClassifiedMovieReview extends App{
       for(aux <- aux_ls) yield (bad + " " + aux)
       )
   }
-  println(bad_complex_ls.length)
   val bad_search_terms: List[Column] = (for(search_term <- bad_complex_ls) yield F.lit(search_term)).toList
-  println(good_search_terms.length)
-  println(bad_search_terms.length)
-//  bad_complex_ls.foreach(println)
+
   // Searching for simple one-word occurrences
   var final_df = ngram_df.withColumn("is_good",
     F.when(F.array_contains(ngram_df("filtered") ,"good"), "1")
@@ -136,19 +132,14 @@ object ProcessClassifiedMovieReview extends App{
       ).otherwise(0)
     )
 
-  movie_review_df.groupBy("positive_review").count().show()
-
+  // Saving as Avro
   movie_review_df.select(
     F.col("cid").alias("user_id"),
     $"positive_review",
     F.col("id_review").alias("review_id")
-  ).write.mode("overwrite").partitionBy("positive_review").parquet(outputDFpath + "3")
-//    .mode("append")
-//    .partitionBy("positive_review")
-//    .format("avro")
-//    .save(outputDFpath)
-
-
-  //  df.write.mode("overwrite").parquet(outputDF)
-
+  ).write
+    .mode("append")
+    .partitionBy("positive_review")
+    .format("avro")
+    .save(outputDFpath)
 }
