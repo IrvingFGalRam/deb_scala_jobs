@@ -17,7 +17,6 @@ object ProcessClassifiedMovieReview extends App{
 
   println("Reading CSV")
   val df_movie_review = spark.read.option("header", value = true).csv(inputCSVpath)
-  df_movie_review.show(5, truncate = false)
 
   // Cleaning review string
   val chars_to_remove = ".,;-_()'!¡*"
@@ -39,7 +38,6 @@ object ProcessClassifiedMovieReview extends App{
 
   // Applying separation and filtering
   val tokenized_df = remover.transform(tokenizer.transform(df))
-  tokenized_df.select($"cid", $"id_review", $"filtered").show(5, truncate=false)
 
   // Grouping each 2 words to try and get a little bit more context
   val ngram = new NGram().setN(2).setInputCol("filtered").setOutputCol("ngrams")
@@ -122,6 +120,7 @@ object ProcessClassifiedMovieReview extends App{
     ).otherwise("0")
   )
 
+  // Defining logic to stablish positive review, and including a timestamp
   val movie_review_df =
     final_df.withColumn("positive_review",
       F.when(
@@ -130,13 +129,16 @@ object ProcessClassifiedMovieReview extends App{
           ((F.col("complex_good") === "1") && (F.col("complex_bad") === "0")),
         1
       ).otherwise(0)
+    ).withColumn("insert_date",
+      F.current_timestamp()
     )
 
-  // Saving as Avro
+  // Saving as Avro, partitioning by positive_review to improve further processing
   movie_review_df.select(
     F.col("cid").alias("user_id"),
     $"positive_review",
-    F.col("id_review").alias("review_id")
+    F.col("id_review").alias("review_id"),
+    $"insert_date"
   ).write
     .mode("append")
     .partitionBy("positive_review")

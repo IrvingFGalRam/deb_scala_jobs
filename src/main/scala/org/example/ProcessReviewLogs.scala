@@ -25,7 +25,6 @@ object ProcessReviewLogs extends App{
   val parsed = df.withColumn("parsed", from_xml($"log", logSchema))
   // Unpaking DF parsed.log columns
   val log_rev = parsed.select("id_review", "parsed.log.*")
-  log_rev.show(5)
 
   // Auxiliary DF to fill browsers
   val device_browserData = Seq(
@@ -39,14 +38,12 @@ object ProcessReviewLogs extends App{
     .add("os_aux",StringType)
     .add("browser",StringType)
   val device_browser = spark.createDataFrame(spark.sparkContext.parallelize(device_browserData), device_browserSchema)
-  device_browser.show()
 
   // Join to set browser according to the device's OS
   val log_rev_tmp = log_rev.join(device_browser,
     log_rev("os") === device_browser("os_aux"),
     "left"
   )
-  log_rev_tmp.show()
 
   // Renaming cols and inserting browser column
   val log_rev_df = log_rev_tmp.select($"id_review" as "log_id",
@@ -58,7 +55,6 @@ object ProcessReviewLogs extends App{
     $"ipAddress" as "ip",
     $"phoneNumber" as "phone_number"
   )
-  log_rev_df.show(5)
 
   // Saving transformed DF as Avro (row based, better when dealing with the whole table)
   log_rev_df.write.mode("overwrite").format("avro").save(outputDF)
