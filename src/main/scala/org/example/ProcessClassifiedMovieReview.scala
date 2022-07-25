@@ -140,7 +140,7 @@ object ProcessClassifiedMovieReview extends App{
     F.col("id_review").alias("review_id"),
     $"insert_date"
   ).write
-    .mode("append")
+    .mode("overwrite")
     .partitionBy("positive_review")
     .format("avro")
     .save(outputDFpath)
