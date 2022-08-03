@@ -1,7 +1,7 @@
 package org.example
 
 import com.databricks.spark.xml.functions.from_xml
-import com.databricks.spark.xml.schema_of_xml
+import com.databricks.spark.xml.{schema_of_xml, schema_of_xml_df}
 import org.apache.spark.sql.types.{StringType, StructType}
 import org.apache.spark.sql.{Row, SparkSession}
 

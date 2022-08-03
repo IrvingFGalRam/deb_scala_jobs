@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{StringType, StructType}
 
 object ProcessReviewLogs extends App{
 
-  val spark = SparkSession.builder()
+  val spark = SparkSession.builder
     .master("local[1]")
     .appName("Process Review Logs Job")
     .getOrCreate();
