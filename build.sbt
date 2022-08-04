@@ -3,7 +3,7 @@ ThisBuild / version          := "0.1.1"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "scala-data-proc",
+    name := "scala-jobs",
     scalaVersion := "2.12.14",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-library" % scalaVersion.value % "provided",
