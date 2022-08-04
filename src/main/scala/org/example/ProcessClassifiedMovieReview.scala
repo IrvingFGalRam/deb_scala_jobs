@@ -5,7 +5,7 @@ import org.apache.spark.ml.feature.{NGram, StopWordsRemover, Tokenizer}
 
 object ProcessClassifiedMovieReview extends App{
 
-  val spark = SparkSession.builder()
+  val spark = SparkSession.builder
     .master("local[1]")
     .appName("Process Classified Movie Review Job")
     .getOrCreate();
