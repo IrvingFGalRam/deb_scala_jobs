@@ -31,7 +31,7 @@ object ProcessClassifiedMovieReview extends App{
   // Remove key words from stopWords. To disable the words from being filtered out
   val ok_words = List("isn't", "its", "wasn't", "couldn't", "above")
 
-  var stopWords = remover.getStopWords.to(ListBuffer)
+//  var stopWords = remover.getStopWords.to(ListBuffer)
   var stopWords = remover.getStopWords.to(ListBuffer)
   ok_words.foreach(stopWords -= _)
   val cstm_stopWords = for (s <- stopWords)
