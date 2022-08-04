@@ -32,7 +32,7 @@ object ProcessClassifiedMovieReview extends App{
   val ok_words = List("isn't", "its", "wasn't", "couldn't", "above")
 
 //  var stopWords = remover.getStopWords.to(ListBuffer)
-  var stopWords = remover.getStopWords.to(ListBuffer)
+  var stopWords: ListBuffer[String] = ListBuffer(remover.getStopWords: _*)
   ok_words.foreach(stopWords -= _)
   val cstm_stopWords = for (s <- stopWords)
     yield s.replace("\'", "")
