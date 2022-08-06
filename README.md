@@ -12,7 +12,7 @@ Then go to Run Configurations > Environment Variables
 ### 3. Running on GCP Dataproc: you have to create a Compute Engine cluster with the following specs
 
   - Using [Dataproc - 2.X version](https://cloud.google.com/dataproc/docs/concepts/versioning/dataproc-release-2.0) with Scala 2.12.14 and Spark 3.1.3
-  - Setting properties: spark spark.jars.packages com.databricks:spark-xml_2.12:0.13.0;org.apache.spark:spark-mllib_2.12:3.1.3,org.apache.spark:spark-avro_2.12:3.1.3
+  - Setting properties: spark spark.jars.packages com.databricks:spark-xml_2.12:0.13.0,org.apache.spark:spark-mllib_2.12:3.1.3,org.apache.spark:spark-avro_2.12:3.1.3
 
 #### 3.1. You have to compile as a Jar in order to upload to GCS
 

@@ -2,7 +2,7 @@ package org.example
 
 import org.apache.spark.sql.{SparkSession, functions => F}
 
-object ShowAvro {
+object ShowTable {
 
   def main(args: Array[String]) {
 
@@ -24,6 +24,8 @@ object ShowAvro {
 
     println("DataFrame Schema")
     df.printSchema
+
+    println("Records Number:\t" + df.count)
 
     println("DataFrame Show")
     df.show(n_records, truncate = false)
