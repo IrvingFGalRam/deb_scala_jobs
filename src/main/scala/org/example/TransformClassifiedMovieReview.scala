@@ -1,6 +1,7 @@
 package org.example
 
 import org.apache.spark.ml.feature.{NGram, StopWordsRemover, Tokenizer}
+import org.apache.spark.sql.types.{IntegerType, TimestampType}
 import org.apache.spark.sql.{Column, SparkSession, functions => F}
 
 import scala.collection.mutable.ListBuffer
@@ -139,10 +140,10 @@ object TransformClassifiedMovieReview {
 
     // Saving as Avro, partitioning by positive_review to improve further processing
     movie_review_df.select(
-      F.col("cid").alias("user_id"),
-      $"positive_review",
-      F.col("id_review").alias("review_id"),
-      $"insert_date"
+      F.col("cid").cast(IntegerType).alias("user_id"),
+      F.col("id_review").cast(IntegerType).alias("review_id"),
+      F.col("positive_review").cast(IntegerType).alias("positive_review"),
+      F.col("insert_date").cast(TimestampType).alias("insert_date"),
     ).write
       .mode("overwrite")
       .partitionBy("positive_review")
