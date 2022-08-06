@@ -17,7 +17,7 @@ Then go to Run Configurations > Environment Variables
 #### 3.1. You have to compile as a Jar in order to upload to GCS
 
   - Open the terminal > run the command "sbt package"
-  - Upload the scala-jobs_2.12-0.1.1.jar to GCS
+  - Upload the target > scala-12 > scala-jobs_2.12-0.1.1.jar to GCS
 
 ### 4. Submit the jobs with the configurations
 
