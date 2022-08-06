@@ -16,10 +16,17 @@ object TransformClassifiedMovieReview {
 
     import spark.implicits._
 
-    val inputCSVpath = "gs://capstone-project-wzl-storage/bronze/movie_review.csv"
-    val outputDFpath = "gs://capstone-project-wzl-storage/silver/classified_movie_review"
+    var inputCSVpath: String = "gs://capstone-project-wzl-storage/bronze/movie_review.csv"
+    var outputDFpath: String = "gs://capstone-project-wzl-storage/silver/classified_movie_review"
+    var write_format: String = "avro"
 
-    println("Reading CSV")
+    if (args.length == 3){
+      inputCSVpath = args(0)
+      outputDFpath = args(1)
+      write_format = args(2)
+    }
+
+      println("Reading CSV")
     val df_movie_review = spark.read.option("header", value = true).csv(inputCSVpath)
 
     // Cleaning review string
@@ -140,14 +147,14 @@ object TransformClassifiedMovieReview {
 
     // Saving as Avro, partitioning by positive_review to improve further processing
     movie_review_df.select(
-      F.col("cid").cast(IntegerType).alias("user_id"),
-      F.col("id_review").cast(IntegerType).alias("review_id"),
-      F.col("positive_review").cast(IntegerType).alias("positive_review"),
-      F.col("insert_date").cast(TimestampType).alias("insert_date"),
+      F.col("cid").cast(IntegerType) as "user_id",
+      F.col("id_review").cast(IntegerType) as "review_id",
+      F.col("positive_review").cast(IntegerType) as "positive_review",
+      F.col("insert_date").cast(TimestampType) as "insert_date"
     ).write
       .mode("overwrite")
       .partitionBy("positive_review")
-      .format("avro")
+      .format(write_format)
       .save(outputDFpath)
   }
 }

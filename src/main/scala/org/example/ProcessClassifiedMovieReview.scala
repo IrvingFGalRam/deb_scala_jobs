@@ -15,6 +15,7 @@ object ProcessClassifiedMovieReview extends App{
 
   val inputCSVpath = sys.env("INPUT_PATH")
   val outputDFpath = sys.env("OUTPUT_PATH")
+  val write_format = sys.env("WRITE_FORMAT")
 
   println("Reading CSV")
   val df_movie_review = spark.read.option("header", value = true).csv(inputCSVpath)
@@ -137,13 +138,13 @@ object ProcessClassifiedMovieReview extends App{
 
   // Saving as Avro, partitioning by positive_review to improve further processing
   movie_review_df.select(
-    F.col("cid").cast(IntegerType).alias("user_id"),
-    F.col("id_review").cast(IntegerType).alias("review_id"),
-    F.col("positive_review").cast(IntegerType).alias("positive_review"),
-    F.col("insert_date").cast(TimestampType).alias("insert_date"),
+    F.col("cid").cast(IntegerType) as "user_id",
+    F.col("id_review").cast(IntegerType) as "review_id",
+    F.col("positive_review").cast(IntegerType) as "positive_review",
+    F.col("insert_date").cast(TimestampType) as "insert_date"
   ).write
     .mode("overwrite")
     .partitionBy("positive_review")
-    .format("avro")
+    .format(write_format)
     .save(outputDFpath)
 }
