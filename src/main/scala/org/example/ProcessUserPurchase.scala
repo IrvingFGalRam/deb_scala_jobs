@@ -27,7 +27,8 @@ object ProcessUserPurchase extends App{
     trim($"stock_code".cast(StringType)) as "stock_code",
     trim($"detail".cast(StringType)) as "detail",
     abs($"quantity".cast(IntegerType)) as "quantity", // abs to convert negative quantities
-    to_timestamp($"invoice_date", "yyyy-MM-dd HH:mm:ss") as "invoice_date",
+    to_timestamp($"invoice_date", "M/d/yyyy H:mm") as "invoice_date", // Local
+//    to_timestamp($"invoice_date", "yyyy-MM-dd HH:mm:ss") as "invoice_date", // Cloud after postgres_to_gcs
     abs($"unit_price".cast(DecimalType(8, 3))) as "unit_price", // abs to convert negative prices
     $"customer_id".cast(IntegerType) as "customer_id",
     $"country".cast(StringType) as "country"
